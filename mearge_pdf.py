@@ -1,32 +1,20 @@
-import os
-import PyPDF2
 from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 import io
 
-def merge_pdfs(input_directory):
-    merger = PyPDF2.PdfMerger()
-
-    for filename in sorted(os.listdir(input_directory)):
-        if filename.endswith('.pdf'):
-            input_pdf_path = os.path.join(input_directory, filename)
-            merger.append(input_pdf_path)
-            print(f"Added {input_pdf_path} to the merger")
-
-    # メモリに一時ファイルとして保存
-    temp_pdf_stream = io.BytesIO()
-    merger.write(temp_pdf_stream)
-    temp_pdf_stream.seek(0)  # ストリームの先頭に移動
-    return temp_pdf_stream
-
-def add_page_numbers(input_pdf_stream, output_pdf_path):
+def add_page_numbers(input_pdf, output_pdf):
     # 読み込み用PDF
-    reader = PdfReader(input_pdf_stream)
+    reader = PdfReader(input_pdf)
     writer = PdfWriter()
     
     # 全ページに対して処理
-    for page_num, page in enumerate(reader.pages, start=1):
+    for page_num in range(len(reader.pages)):
+        # 現在のページを取得
+        page = reader.pages[page_num]
         media_box = page.mediabox
+
+        # ページサイズを取得
         width = float(media_box.width)
         height = float(media_box.height)
 
@@ -35,7 +23,7 @@ def add_page_numbers(input_pdf_stream, output_pdf_path):
         can = canvas.Canvas(packet, pagesize=(width, height))
         # ページ番号をページの中央下部に描画
         can.setFont("Times-Roman", 12)
-        can.drawString(width / 2, 30, str(page_num))
+        can.drawString(width / 2, 30, str(page_num + 1))  # ここでy座標を10に設定
         can.save()
 
         packet.seek(0)
@@ -44,14 +32,10 @@ def add_page_numbers(input_pdf_stream, output_pdf_path):
         writer.add_page(page)
 
     # 新しいPDFとして保存
-    with open(output_pdf_path, 'wb') as f:
+    with open(output_pdf, 'wb') as f:
         writer.write(f)
 
-# 使用例
-base_directory = '.'  # ベースディレクトリのパス
-input_directory = os.path.join(base_directory, 'output')  # 入力ディレクトリのパス
-output_pdf_path = os.path.join(base_directory, 'numbered_output.pdf')  # 出力PDFファイルのパス
-
-# PDFを結合してページ番号を追加
-merged_pdf_stream = merge_pdfs(input_directory)
-add_page_numbers(merged_pdf_stream, output_pdf_path)
+# 使い方
+input_pdf = "merged_output.pdf"  # 元のPDFファイル
+output_pdf = "output_with_page_numbers.pdf"  # ページ番号を追加するPDFファイル
+add_page_numbers(input_pdf, output_pdf)
